@@ -1,0 +1,122 @@
+[
+  {
+    "id": "lally-2010-automaticity",
+    "topic": "How long habit formation takes",
+    "source": "Lally, van Jaarsveld, Potts & Wardle (2010). How are habits formed: Modelling habit formation in the real world. European Journal of Social Psychology.",
+    "url": "https://doi.org/10.1002/ejsp.674",
+    "kind": "peer-reviewed",
+    "text": "Ninety-six participants chose a new eating, drinking or activity behaviour and performed it daily in the same context for twelve weeks, rating how automatic it felt each day. Automaticity rose along an asymptotic curve: gains were steepest at the start and flattened as the behaviour became established. The median time to reach the plateau of automaticity was 66 days, but the spread across individuals was enormous, ranging from 18 days to 254 days. This is the source of the widely repeated claim that habits take roughly two months to form, and it is also the strongest evidence against any single universal number. Simpler behaviours, such as drinking a glass of water after breakfast, automated far faster than more effortful ones like doing fifty sit-ups. The practical implication is that someone three weeks into a new habit who still finds it effortful is not failing; they are inside the normal range, and the honest expectation to set is months rather than the popular twenty-one days."
+  },
+  {
+    "id": "lally-2010-missed-days",
+    "topic": "What one missed day does to a habit",
+    "source": "Lally, van Jaarsveld, Potts & Wardle (2010). How are habits formed: Modelling habit formation in the real world. European Journal of Social Psychology.",
+    "url": "https://doi.org/10.1002/ejsp.674",
+    "kind": "peer-reviewed",
+    "text": "The same twelve-week study examined what happened when participants missed an opportunity to perform their chosen behaviour. Missing a single opportunity did not measurably damage the habit formation process; the automaticity curve absorbed the gap and continued climbing. What mattered was consistency over the longer run rather than an unbroken chain of individual days. Extended periods of non-performance, by contrast, did slow progress. This finding directly contradicts the all-or-nothing framing that many habit trackers encourage, where breaking a streak is presented as losing everything. A coach using this evidence should treat one missed day as noise rather than failure, and should reserve concern for sustained drift. The useful message to someone who has just broken a streak is that the research does not support the idea that they are back at zero, and that resuming the next day is what protects the progress they have already built."
+  },
+  {
+    "id": "gollwitzer-implementation-intentions",
+    "topic": "If-then plans (implementation intentions)",
+    "source": "Gollwitzer & Sheeran (2006). Implementation intentions and goal achievement: A meta-analysis of effects and processes. Advances in Experimental Social Psychology.",
+    "url": "https://doi.org/10.1016/S0065-2601(06)38002-1",
+    "kind": "peer-reviewed",
+    "text": "An implementation intention is a plan in the form 'when situation X arises, I will perform response Y'. It differs from a goal intention ('I intend to exercise more') by specifying the cue and the action in advance, so the behaviour can be triggered by the situation rather than requiring a fresh decision. A meta-analysis covering 94 independent studies found a medium-to-large positive effect on goal attainment, around d = 0.65. The proposed mechanism is twofold: the specified cue becomes highly accessible, and the cue-response link becomes automatic enough to run without deliberation. This makes if-then plans one of the cheapest and best-evidenced interventions available to a habit coach. Turning a vague intention such as 'read more' into 'when I get into bed, I will read one page' is a concrete, evidence-backed move, and it is most useful precisely when someone reports that they keep meaning to do something but never get round to it."
+  },
+  {
+    "id": "wood-neal-2007-context-cues",
+    "topic": "Habits are cue-driven, not willpower-driven",
+    "source": "Wood & Neal (2007). A new look at habits and the habit-goal interface. Psychological Review.",
+    "url": "https://doi.org/10.1037/0033-295X.114.4.843",
+    "kind": "peer-reviewed",
+    "text": "This theoretical review argues that habits are best understood as learned associations between a stable context cue and a response, acquired through repetition in that context. Once the association is strong, the cue itself activates the response with little conscious intent, which is why established habits persist even when motivation dips and why they are hard to stop by intention alone. Goals matter mainly at the start, in getting the behaviour repeated often enough in a consistent setting for the association to form. The practical consequence is that advice centred on trying harder or wanting it more targets the wrong mechanism for an established habit. Designing the environment so that the cue reliably appears, and appears in the same place and time, does more work than motivation does. It also explains why a habit that seems solid can collapse when the surrounding context changes."
+  },
+  {
+    "id": "verplanken-wood-2006-discontinuity",
+    "topic": "Context change as a window of opportunity",
+    "source": "Verplanken & Wood (2006). Interventions to break and create consumer habits. Journal of Public Policy & Marketing.",
+    "url": "https://doi.org/10.1509/jppm.25.1.90",
+    "kind": "peer-reviewed",
+    "text": "Because habits depend on stable context cues, disrupting the context disrupts the habit. This is the habit discontinuity idea: life changes that scramble someone's environment, such as moving house, changing jobs, or a change in schedule, temporarily weaken existing cue-response links and force behaviour back under deliberate control. That is bad news for good habits, which can quietly disappear after a move, and good news for unwanted ones, which become unusually easy to drop in the same window. Interventions delivered during such a transition tend to be more effective than the same interventions delivered during a stable period. For a coach this means timing matters: someone who has just changed their routine is in a high-leverage moment, and both the risk of losing an established habit and the opportunity to install a new one are at their highest."
+  },
+  {
+    "id": "judah-2013-flossing-cue",
+    "topic": "Where to attach a new habit in an existing routine",
+    "source": "Judah, Gardner & Aunger (2013). Forming a flossing habit: An exploratory study of the psychological determinants of habit formation. British Journal of Health Psychology.",
+    "url": "https://doi.org/10.1111/j.2044-8287.2012.02086.x",
+    "kind": "peer-reviewed",
+    "text": "This study followed people forming a flossing habit over four weeks and compared attaching the new behaviour before toothbrushing versus after it. Flossing after brushing produced higher automaticity and better maintenance than flossing before. The interpretation is that an existing, reliably performed routine acts as a dependable cue, and that placing the new behaviour immediately after that routine lets it inherit the trigger, while placing it before means the new behaviour has to be initiated on its own and also delays the established one. The general principle is to anchor a new habit to the completion of something the person already does without fail, rather than inserting it earlier in a sequence. When someone cannot identify a reliable cue for a habit they keep forgetting, finding the existing routine it can follow is usually more productive than adding another reminder."
+  },
+  {
+    "id": "milkman-2014-temptation-bundling",
+    "topic": "Temptation bundling",
+    "source": "Milkman, Minson & Volpp (2014). Holding the Hunger Games hostage at the gym: An evaluation of temptation bundling. Management Science.",
+    "url": "https://doi.org/10.1287/mnsc.2013.1784",
+    "kind": "peer-reviewed",
+    "text": "Temptation bundling pairs an activity that is good for you but unpleasant in the moment with an indulgence you enjoy, and makes the indulgence available only during that activity. In this field experiment, participants could listen to addictive audio novels only while at the gym. Bundling increased gym attendance relative to control, though the effect decayed over time and around a Thanksgiving break. The mechanism is that it moves some of the reward forward into the moment of effort, instead of leaving all the payoff in a distant future. This matters because the costs of most good habits are immediate while the benefits are delayed, which is exactly the structure that makes them hard to sustain. Practical application: ask what the person genuinely enjoys, and find a way to make it available only alongside the habit they are struggling to keep."
+  },
+  {
+    "id": "woolley-fishbach-immediate-rewards",
+    "topic": "Immediate rewards beat delayed benefits for persistence",
+    "source": "Woolley & Fishbach (2017). Immediate rewards predict adherence to long-term goals. Personality and Social Psychology Bulletin.",
+    "url": "https://doi.org/10.1177/0146167216676480",
+    "kind": "peer-reviewed",
+    "text": "Across several studies, how much people enjoyed an activity in the moment predicted whether they persisted with it better than how much they valued the long-term outcome did. People pursuing New Year's resolutions, exercising, or eating healthily kept going when the activity itself was immediately rewarding, whereas the importance they placed on the eventual benefit predicted intentions but not sustained behaviour. The implication is that enjoyment is not a luxury layered on top of a habit; it is a primary driver of whether the habit survives. A coach should therefore treat 'this is boring and I dread it' as a serious design problem rather than a motivation problem, and look for a version of the behaviour the person actually likes, or a way to add something pleasant to the moment of doing it, rather than restating why the goal matters."
+  },
+  {
+    "id": "wohl-2010-self-forgiveness",
+    "topic": "Self-forgiveness after a lapse",
+    "source": "Wohl, Pychyl & Bennett (2010). I forgive myself, now I can study: How self-forgiveness for procrastinating can reduce future procrastination. Personality and Individual Differences.",
+    "url": "https://doi.org/10.1016/j.paid.2010.05.029",
+    "kind": "peer-reviewed",
+    "text": "Students who forgave themselves for procrastinating before a first examination went on to procrastinate less before the next one. Self-forgiveness appears to reduce the negative self-directed emotion attached to the task, and it is that emotion which makes the task aversive and encourages further avoidance. Harsh self-criticism after a lapse therefore tends to be self-defeating: it increases the likelihood of another lapse rather than preventing one. For a habit coach this supports a specific tone after a missed period. Framing a gap as evidence of a character flaw adds an emotional cost to resuming, whereas treating it as an ordinary event and moving directly to the next opportunity lowers the barrier to restarting. The evidence supports being matter-of-fact about lapses, not because it is kind, but because it produces better subsequent behaviour."
+  },
+  {
+    "id": "dai-2014-fresh-start-effect",
+    "topic": "Temporal landmarks and fresh starts",
+    "source": "Dai, Milkman & Riis (2014). The fresh start effect: Temporal landmarks motivate aspirational behavior. Management Science.",
+    "url": "https://doi.org/10.1287/mnsc.2014.1901",
+    "kind": "peer-reviewed",
+    "text": "Aspirational behaviour such as gym visits, searches for diet information, and commitments to goals rises immediately after temporal landmarks: the start of a week, a month, a year, a semester, or after a birthday. The explanation is that landmarks create a psychological break from the past self, relegating past failures to a previous chapter and increasing confidence in the new one. The effect is useful and also limited: it reliably boosts initiation but does nothing to guarantee follow-through. For a coach, this means a landmark is a good moment to propose a restart or a change of approach, and a bad moment to assume the problem is solved. Someone who has just lapsed can be told, accurately, that the upcoming Monday is a genuinely favourable moment to resume, while being reminded that the mechanism that carries the habit afterwards still has to be built."
+  },
+  {
+    "id": "locke-latham-2002-goal-setting",
+    "topic": "Specific and challenging goals",
+    "source": "Locke & Latham (2002). Building a practically useful theory of goal setting and task motivation. American Psychologist.",
+    "url": "https://doi.org/10.1037/0003-066X.57.9.705",
+    "kind": "peer-reviewed",
+    "text": "Summarising 35 years of research, this paper concludes that specific and difficult goals consistently produce higher performance than vague encouragement to 'do your best', and that performance rises with goal difficulty up to the limit of a person's ability. The effect depends on several moderators: the person must be committed to the goal, must have feedback on progress, and must have the ability and resources to reach it. Goals that exceed capability, or that the person has not genuinely accepted, do not produce the benefit. For habit coaching this cuts both ways. Replacing 'exercise more' with 'walk 8,000 steps on weekdays' is a real improvement because it is specific and measurable. But raising a target for someone who is already failing to hit the current one ignores the commitment and ability moderators, and the evidence does not support it."
+  },
+  {
+    "id": "fogg-tiny-habits",
+    "topic": "Making the behaviour smaller",
+    "source": "Fogg (2019). Tiny Habits: The Small Changes That Change Everything. Houghton Mifflin Harcourt.",
+    "url": "https://tinyhabits.com/",
+    "kind": "practitioner book",
+    "text": "The Fogg Behavior Model states that a behaviour occurs when motivation, ability and a prompt converge at the same moment, and that if the behaviour does not happen, one of those three was missing. Because motivation fluctuates and cannot be relied upon, the model's central recommendation is to increase ability by shrinking the behaviour until it can be done even on a low-motivation day: two push-ups, one page, flossing a single tooth. Each tiny habit is anchored to an existing routine that already happens reliably, and immediately celebrated to attach positive emotion to it. This is a practitioner framework rather than a controlled experimental finding, so it should be cited as such, but its core move is consistent with the experimental literature: reducing the effort required at the moment of action is more dependable than trying to raise motivation."
+  },
+  {
+    "id": "clear-atomic-habits",
+    "topic": "Habit stacking and environment design",
+    "source": "Clear (2018). Atomic Habits: An Easy & Proven Way to Build Good Habits & Break Bad Ones. Avery.",
+    "url": "https://jamesclear.com/atomic-habits",
+    "kind": "practitioner book",
+    "text": "This popular synthesis organises habit change around four steps: make the cue obvious, make the behaviour attractive, make it easy, and make the reward satisfying. Its best-known practical devices are habit stacking, which attaches a new behaviour to the end of an existing one in the form 'after I do X, I will do Y'; the two-minute rule, which says to scale a new habit down until it takes under two minutes to start; and environment design, which changes the surroundings so the desired cue is unavoidable and the undesired one is out of reach. These prescriptions largely repackage findings from the academic literature on implementation intentions, cue-response learning and ability. It is a practitioner book rather than primary research, so it should be cited as a framework, and the underlying experimental sources should be preferred when a claim needs evidential weight."
+  },
+  {
+    "id": "rothman-2000-maintenance",
+    "topic": "Why maintenance differs from starting",
+    "source": "Rothman (2000). Toward a theory-based analysis of behavioral maintenance. Health Psychology.",
+    "url": "https://doi.org/10.1037/0278-6133.19.Suppl1.64",
+    "kind": "peer-reviewed",
+    "text": "This paper argues that initiating a behaviour and maintaining it are governed by different decision processes. Initiation depends on favourable expectations about a future outcome: people start because they believe the change will be worth it. Maintenance depends instead on satisfaction with the outcomes actually experienced: people continue because what they have received so far seems worth the continued cost. A direct consequence is that unrealistically high expectations, which help someone start, actively undermine maintenance, because the results almost inevitably fall short and the comparison produces dissatisfaction. For a coach, this means the conversation with someone four weeks in should differ from the conversation at week zero. Rather than restating the future benefits, the productive move is to draw attention to concrete gains already realised, and to check whether the person's original expectations were calibrated to what the behaviour can actually deliver."
+  },
+  {
+    "id": "kwasnicka-2016-maintenance-review",
+    "topic": "What sustains behaviour change over time",
+    "source": "Kwasnicka, Dombrowski, White & Sniehotta (2016). Theoretical explanations for maintenance of behaviour change: a systematic review of behaviour theories. Health Psychology Review.",
+    "url": "https://doi.org/10.1080/17437199.2016.1151372",
+    "kind": "peer-reviewed",
+    "text": "This systematic review synthesised 100 behaviour theories and identified five recurring themes that explain why behaviour change is maintained rather than abandoned. Maintenance is more likely when the person's motives are self-determined and congruent with their identity and values; when self-regulation, including monitoring and coping with setbacks, is sustained; when the resources required, such as energy, attention and emotional capacity, are not depleted; when the behaviour has become habitual and is triggered by context cues rather than decisions; and when the physical and social environment supports it. The practical reading is that a habit failing in week eight is rarely failing for the reason it was hard in week one. The useful diagnostic questions concern which of these five supports has eroded: whether the reason for doing it still feels like the person's own, whether life has become more depleting, or whether the surrounding context has changed."
+  }
+]

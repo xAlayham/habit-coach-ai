@@ -1,3 +1,4 @@
+import asyncio
 import functools
 import json
 import os
@@ -7,13 +8,15 @@ import anthropic
 import httpx
 from dotenv import load_dotenv
 
+import rag
+
 load_dotenv()
 
 MODEL = "claude-opus-5"
 MAX_TURNS = 8
 
-client = anthropic.Anthropic()
-http_client = httpx.Client(
+client = anthropic.AsyncAnthropic()
+http_client = httpx.AsyncClient(
     base_url=os.environ["HABIT_API_BASE"].rstrip("/"),
     timeout=30.0,
 )
@@ -26,7 +29,15 @@ SYSTEM_PROMPT = (
     "current period, and the date it was last completed. You CANNOT see a full "
     "history of past completions, so do not claim to know how many days someone "
     "missed or how they did in a specific past week. "
-    "Keep advice concise, specific, and grounded in what the data actually shows."
+    "Keep advice concise, specific, and grounded in what the data actually shows. "
+    "When the user asks anything about how habits work in general - how long they "
+    "take to form, what a missed day or broken streak means, how to make one stick, "
+    "why they keep forgetting - call search_habit_research first and base your "
+    "advice on what it returns. Cite the source inline, author and year is enough, "
+    "for example (Lally et al., 2010). Never attribute a claim to a source that did "
+    "not make it, and never invent a citation. If the research library does not "
+    "cover the question, say so plainly and give your best general advice without "
+    "a citation."
 )
 
 
@@ -42,22 +53,26 @@ class AgentRefused(AgentError):
     pass
 
 
-def _api_get(path: str, token: str):
-    response = http_client.get(path, headers={"Authorization": f"Bearer {token}"})
+async def _api_get(path: str, token: str):
+    response = await http_client.get(path, headers={"Authorization": f"Bearer {token}"})
     response.raise_for_status()
     return response.json()
 
 
-def get_user_habits(token: str) -> list[dict]:
-    habits = _api_get("/habits", token)
+async def get_user_habits(token: str) -> list[dict]:
+    habits = await _api_get("/habits", token)
     return [
         {"id": h["id"], "name": h["name"], "frequency": h["frequency"]}
         for h in habits
     ]
 
 
-def get_habit_detail(token: str, habit_id: int) -> dict:
-    return _api_get(f"/habits/{habit_id}", token)
+async def get_habit_detail(token: str, habit_id: int) -> dict:
+    return await _api_get(f"/habits/{habit_id}", token)
+
+
+async def search_habit_research(query: str, top_k: int = rag.DEFAULT_TOP_K) -> list[dict]:
+    return await asyncio.to_thread(rag.search_research, query, top_k)
 
 
 get_user_habits_tool = {
@@ -96,51 +111,65 @@ get_habit_detail_tool = {
     },
 }
 
-TOOLS = [get_user_habits_tool, get_habit_detail_tool]
+search_habit_research_tool = {
+    "name": "search_habit_research",
+    "description": (
+        "Searches a curated library of habit-formation research - peer-reviewed "
+        "studies plus a few practitioner frameworks - and returns the most relevant "
+        "passages, each with its citation. Call this whenever the user asks how "
+        "habits work in general: how long they take to become automatic, what a "
+        "missed day or broken streak actually costs, how to make a habit stick, why "
+        "they keep forgetting one. It contains NO data about this user - use "
+        "get_user_habits and get_habit_detail for that. Search with the user's "
+        "underlying problem phrased in natural language, for example 'broke a long "
+        "streak and feels like giving up', rather than with single keywords."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string",
+                "description": "The user's problem or question in natural language.",
+            },
+            "top_k": {
+                "type": "integer",
+                "description": "How many distinct sources to return, 1 to 5. Defaults to 3.",
+            },
+        },
+        "required": ["query"],
+    },
+}
+
+TOOLS = [get_user_habits_tool, get_habit_detail_tool, search_habit_research_tool]
 
 
 def build_tool_functions(token: str) -> dict:
     return {
         "get_user_habits": functools.partial(get_user_habits, token),
         "get_habit_detail": functools.partial(get_habit_detail, token),
+        "search_habit_research": search_habit_research,
     }
 
 
-def _run_tool_calls(content, tool_functions: dict, verbose: bool) -> list[dict]:
-    tool_results = []
+async def _execute_tool_call(block, tool_functions: dict) -> dict:
+    try:
+        fn = tool_functions[block.name]
+        result = await fn(**block.input)
+        content = json.dumps(result)
+        is_error = False
+    except httpx.HTTPStatusError as exc:
+        content = f"API returned {exc.response.status_code}: {exc.response.text}"
+        is_error = True
+    except Exception as exc:
+        content = f"Tool call failed: {exc}"
+        is_error = True
 
-    for block in content:
-        if block.type != "tool_use":
-            continue
-
-        if verbose:
-            print(f"   calling {block.name} with {block.input}")
-
-        try:
-            fn = tool_functions[block.name]
-            result = fn(**block.input)
-            result_content = json.dumps(result)
-            is_error = False
-        except httpx.HTTPStatusError as exc:
-            result_content = (
-                f"API returned {exc.response.status_code}: {exc.response.text}"
-            )
-            is_error = True
-        except Exception as exc:
-            result_content = f"Tool call failed: {exc}"
-            is_error = True
-
-        if is_error and verbose:
-            print(f"   -> {result_content}")
-
-        tool_results.append({
-            "type": "tool_result",
-            "tool_use_id": block.id,
-            "content": result_content,
-            "is_error": is_error,
-        })
-
-    return tool_results
+    return {
+        "type": "tool_result",
+        "tool_use_id": block.id,
+        "content": content,
+        "is_error": is_error,
+    }
 
 
 def _final_text(response) -> str:
@@ -149,39 +178,91 @@ def _final_text(response) -> str:
     ).strip()
 
 
-def run_agent(question: str, token: str, verbose: bool = False) -> str:
+async def stream_agent(question: str, token: str):
     tool_functions = build_tool_functions(token)
     messages = [{"role": "user", "content": question}]
 
     for turn in range(MAX_TURNS):
-        if verbose:
-            print(f"--- turn {turn + 1} ---")
-
-        response = client.messages.create(
+        async with client.messages.stream(
             model=MODEL,
             max_tokens=16000,
             system=SYSTEM_PROMPT,
             tools=TOOLS,
             messages=messages,
-        )
+        ) as stream:
+            async for event in stream:
+                if event.type == "text":
+                    yield {"type": "text", "delta": event.text}
+            response = await stream.get_final_message()
 
         messages.append({"role": "assistant", "content": response.content})
 
         if response.stop_reason == "refusal":
             detail = getattr(response.stop_details, "explanation", None)
-            raise AgentRefused(detail or "The model declined to answer this request.")
+            yield {
+                "type": "error",
+                "code": "refused",
+                "detail": detail or "The model declined to answer this request.",
+            }
+            return
 
         if response.stop_reason != "tool_use":
-            return _final_text(response)
+            yield {"type": "done", "answer": _final_text(response)}
+            return
 
-        messages.append({
-            "role": "user",
-            "content": _run_tool_calls(response.content, tool_functions, verbose),
-        })
+        calls = [block for block in response.content if block.type == "tool_use"]
 
-    raise TurnLimitExceeded(
-        f"The agent did not reach a final answer within {MAX_TURNS} turns."
-    )
+        for block in calls:
+            yield {"type": "tool_start", "name": block.name, "input": block.input}
+
+        results = await asyncio.gather(
+            *(_execute_tool_call(block, tool_functions) for block in calls)
+        )
+
+        for block, result in zip(calls, results):
+            yield {
+                "type": "tool_end",
+                "name": block.name,
+                "ok": not result["is_error"],
+                "detail": result["content"] if result["is_error"] else None,
+            }
+
+        messages.append({"role": "user", "content": results})
+
+    yield {
+        "type": "error",
+        "code": "turn_limit",
+        "detail": f"The agent did not reach a final answer within {MAX_TURNS} turns.",
+    }
+
+
+async def run_agent(question: str, token: str) -> str:
+    async for event in stream_agent(question, token):
+        if event["type"] == "done":
+            return event["answer"]
+        if event["type"] == "error":
+            if event["code"] == "refused":
+                raise AgentRefused(event["detail"])
+            raise TurnLimitExceeded(event["detail"])
+
+    raise TurnLimitExceeded("The agent produced no answer.")
+
+
+async def _cli(question: str, token: str) -> int:
+    async for event in stream_agent(question, token):
+        if event["type"] == "text":
+            print(event["delta"], end="", flush=True)
+        elif event["type"] == "tool_start":
+            print(f"\n[calling {event['name']} {event['input']}]", flush=True)
+        elif event["type"] == "tool_end" and not event["ok"]:
+            print(f"[{event['name']} failed: {event['detail']}]", flush=True)
+        elif event["type"] == "done":
+            print()
+            return 0
+        elif event["type"] == "error":
+            print(f"\n[error] {event['detail']}", file=sys.stderr)
+            return 1
+    return 1
 
 
 if __name__ == "__main__":
@@ -189,8 +270,4 @@ if __name__ == "__main__":
         print("Error: provide a question. Usage: python agent.py 'your question'")
         sys.exit(1)
 
-    try:
-        print(run_agent(sys.argv[1], os.environ["HABIT_API_TOKEN"], verbose=True))
-    except AgentError as exc:
-        print(f"\n[error] {exc}")
-        sys.exit(1)
+    sys.exit(asyncio.run(_cli(sys.argv[1], os.environ["HABIT_API_TOKEN"])))

@@ -12,6 +12,11 @@ HABIT_API_BASE = os.environ["HABIT_API_BASE"]
 
 
 @pytest.fixture
+def anyio_backend():
+    return "asyncio"
+
+
+@pytest.fixture
 def habit_api(monkeypatch):
     fake = FakeHabitAPI(HABIT_API_BASE)
     monkeypatch.setattr(agent, "http_client", fake.build_client())

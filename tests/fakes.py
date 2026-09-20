@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import httpx
 from anthropic.types import Message, RefusalStopDetails, TextBlock, ToolUseBlock, Usage
 
@@ -21,8 +23,11 @@ def says(text):
     return _message([TextBlock(type="text", text=text)], "end_turn")
 
 
-def calls_tools(*calls):
-    content = [
+def calls_tools(*calls, preamble=None):
+    content = []
+    if preamble is not None:
+        content.append(TextBlock(type="text", text=preamble))
+    content += [
         ToolUseBlock(type="tool_use", id=f"toolu_{i}", name=name, input=tool_input)
         for i, (name, tool_input) in enumerate(calls)
     ]
@@ -37,20 +42,50 @@ def refuses(explanation):
     )
 
 
+def split_into_deltas(text):
+    words = text.split(" ")
+    return [word if index == len(words) - 1 else word + " " for index, word in enumerate(words)]
+
+
+class FakeStream:
+    def __init__(self, message):
+        self._message = message
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc_info):
+        return False
+
+    def __aiter__(self):
+        return self._events()
+
+    async def _events(self):
+        for block in self._message.content:
+            if block.type == "text":
+                for delta in split_into_deltas(block.text):
+                    yield SimpleNamespace(type="text", text=delta)
+            else:
+                yield SimpleNamespace(type="content_block_stop")
+
+    async def get_final_message(self):
+        return self._message
+
+
 class FakeMessages:
     def __init__(self, responses, repeat_last):
         self._queue = list(responses)
         self._repeat_last = repeat_last
         self.calls = []
 
-    def create(self, **kwargs):
+    def stream(self, **kwargs):
         kwargs["messages"] = list(kwargs["messages"])
         self.calls.append(kwargs)
         if not self._queue:
             raise AssertionError("the model was called more times than the script allows")
         if self._repeat_last and len(self._queue) == 1:
-            return self._queue[0]
-        return self._queue.pop(0)
+            return FakeStream(self._queue[0])
+        return FakeStream(self._queue.pop(0))
 
 
 class FakeAnthropic:
@@ -78,7 +113,7 @@ class FakeHabitAPI:
         return httpx.Response(status, json=payload)
 
     def build_client(self):
-        return httpx.Client(
+        return httpx.AsyncClient(
             base_url=self._base_url,
             transport=httpx.MockTransport(self._handle),
         )
@@ -90,3 +125,7 @@ class FakeHabitAPI:
     @property
     def auth_headers(self):
         return [request.headers.get("authorization") for request in self.requests]
+
+
+async def collect(stream):
+    return [event async for event in stream]
