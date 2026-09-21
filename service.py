@@ -22,11 +22,11 @@ app = FastAPI(
     description="AI coaching layer over the habit-tracker API.",
 )
 
+DEFAULT_CORS_ORIGINS = "http://localhost:3000,http://localhost:5173"
+
 CORS_ORIGINS = [
-    origin.strip()
-    for origin in os.environ.get(
-        "CORS_ORIGINS", "http://localhost:3000,http://localhost:5173"
-    ).split(",")
+    origin.strip().rstrip("/")
+    for origin in (os.environ.get("CORS_ORIGINS") or DEFAULT_CORS_ORIGINS).split(",")
     if origin.strip()
 ]
 
@@ -125,6 +125,23 @@ class CoachResponse(BaseModel):
 
 def sse(event: dict) -> str:
     return f"event: {event['type']}\ndata: {json.dumps(event)}\n\n"
+
+
+@app.get("/")
+def root() -> dict:
+    return {
+        "service": "habit-coach-ai",
+        "version": app.version,
+        "description": app.description,
+        "docs": "/docs",
+        "endpoints": {
+            "POST /coach": "Ask the coach a question, returns one JSON answer.",
+            "POST /coach/stream": "Same, as Server-Sent Events.",
+            "GET /health": "Liveness probe.",
+            "GET /stats": "Cache and rate-limiter counters.",
+        },
+        "auth": "Authorization: Bearer <habit-tracker-api JWT>",
+    }
 
 
 @app.get("/health")

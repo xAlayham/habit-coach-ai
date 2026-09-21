@@ -595,3 +595,40 @@ def test_stats_reports_cache_and_rate_limit_counters(client, counting_agent, tig
     assert body["cache"]["capacity"] == 4
     assert body["cache"]["hit_rate"] == 0.5
     assert body["rate_limit"]["tracked_users"] >= 1
+
+
+def test_empty_cors_origins_falls_back_to_the_defaults(monkeypatch):
+    import importlib
+
+    monkeypatch.setenv("CORS_ORIGINS", "")
+    reloaded = importlib.reload(service)
+
+    assert reloaded.CORS_ORIGINS == [
+        "http://localhost:3000",
+        "http://localhost:5173",
+    ]
+
+    monkeypatch.delenv("CORS_ORIGINS", raising=False)
+    importlib.reload(service)
+
+
+def test_cors_origins_tolerate_trailing_slashes(monkeypatch):
+    import importlib
+
+    monkeypatch.setenv("CORS_ORIGINS", "https://app.vercel.app/, https://other.test")
+    reloaded = importlib.reload(service)
+
+    assert reloaded.CORS_ORIGINS == ["https://app.vercel.app", "https://other.test"]
+
+    monkeypatch.delenv("CORS_ORIGINS", raising=False)
+    importlib.reload(service)
+
+
+def test_root_describes_the_api_without_auth(unauthenticated_client):
+    response = unauthenticated_client.get("/")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["service"] == "habit-coach-ai"
+    assert body["docs"] == "/docs"
+    assert "POST /coach/stream" in body["endpoints"]
