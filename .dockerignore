@@ -1,0 +1,17 @@
+venv/
+.venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+.git/
+.gitignore
+.env
+chroma_db/
+evals/results/
+tests/
+pytest.ini
+requirements-dev.txt
+README.md
+Dockerfile
+.dockerignore

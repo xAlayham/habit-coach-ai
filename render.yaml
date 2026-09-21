@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: habit-coach-ai
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: HABIT_API_BASE
+        value: https://habit-tracker-api-8zgs.onrender.com
+      - key: HABIT_API_TIMEOUT
+        value: "60"
+      - key: RATE_LIMIT_BURST
+        value: "5"
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "5"
+      - key: CACHE_CAPACITY
+        value: "128"
+      - key: CACHE_TTL_SECONDS
+        value: "300"

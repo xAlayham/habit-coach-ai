@@ -15,10 +15,12 @@ load_dotenv()
 MODEL = "claude-opus-5"
 MAX_TURNS = 8
 
+HABIT_API_TIMEOUT = float(os.environ.get("HABIT_API_TIMEOUT", "60"))
+
 client = anthropic.AsyncAnthropic()
 http_client = httpx.AsyncClient(
     base_url=os.environ["HABIT_API_BASE"].rstrip("/"),
-    timeout=30.0,
+    timeout=httpx.Timeout(HABIT_API_TIMEOUT, connect=10.0),
 )
 
 SYSTEM_PROMPT = (
