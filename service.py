@@ -11,22 +11,27 @@ from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
-from agent import AgentRefused, TurnLimitExceeded, run_agent, stream_agent
+from agent import MODEL, AgentRefused, TurnLimitExceeded, run_agent, stream_agent
+from lru import LRUCache
 from ratelimit import TokenBucketRateLimiter
 
 app = FastAPI(
     title="habit-coach-ai",
-    version="0.3.0",
+    version="0.4.0",
     description="AI coaching layer over the habit-tracker API.",
 )
 
 RATE_LIMIT_BURST = int(os.environ.get("RATE_LIMIT_BURST", "5"))
 RATE_LIMIT_PER_MINUTE = float(os.environ.get("RATE_LIMIT_PER_MINUTE", "5"))
+CACHE_CAPACITY = int(os.environ.get("CACHE_CAPACITY", "128"))
+CACHE_TTL_SECONDS = float(os.environ.get("CACHE_TTL_SECONDS", "300"))
 
 limiter = TokenBucketRateLimiter(
     capacity=RATE_LIMIT_BURST,
     refill_per_second=RATE_LIMIT_PER_MINUTE / 60.0,
 )
+
+answer_cache = LRUCache(capacity=CACHE_CAPACITY, ttl_seconds=CACHE_TTL_SECONDS)
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -53,6 +58,11 @@ def rate_limit_key(token: str) -> str:
         except Exception:
             subject = None
     return hashlib.sha256(str(subject or token).encode()).hexdigest()
+
+
+def cache_key(token: str, question: str) -> str:
+    parts = [rate_limit_key(token), MODEL, " ".join(question.split())]
+    return hashlib.sha256("\x00".join(parts).encode()).hexdigest()
 
 
 class RateLimitGrant(NamedTuple):
@@ -98,13 +108,41 @@ def health() -> dict:
     return {"status": "ok"}
 
 
+@app.get("/stats")
+def stats() -> dict:
+    snapshot = answer_cache.stats()
+    return {
+        "cache": {
+            "hits": snapshot.hits,
+            "misses": snapshot.misses,
+            "evictions": snapshot.evictions,
+            "expirations": snapshot.expirations,
+            "size": snapshot.size,
+            "capacity": snapshot.capacity,
+            "hit_rate": round(snapshot.hit_rate, 3),
+        },
+        "rate_limit": {
+            "burst": limiter.capacity,
+            "per_minute": round(limiter.refill_per_second * 60, 2),
+            "tracked_users": len(limiter),
+        },
+    }
+
+
 @app.post("/coach", response_model=CoachResponse)
 async def coach(
     payload: CoachRequest,
     response: Response,
     grant: RateLimitGrant = Depends(enforce_rate_limit),
 ) -> CoachResponse:
-    response.headers.update(grant.headers)
+    key = cache_key(grant.token, payload.question)
+    cached = answer_cache.get(key)
+
+    if cached is not None:
+        response.headers.update({**grant.headers, "X-Cache": "HIT"})
+        return CoachResponse(answer=cached)
+
+    response.headers.update({**grant.headers, "X-Cache": "MISS"})
 
     try:
         answer = await run_agent(payload.question, grant.token)
@@ -133,6 +171,7 @@ async def coach(
             headers=grant.headers,
         ) from exc
 
+    answer_cache.put(key, answer)
     return CoachResponse(answer=answer)
 
 
@@ -141,9 +180,19 @@ async def coach_stream(
     payload: CoachRequest,
     grant: RateLimitGrant = Depends(enforce_rate_limit),
 ):
+    key = cache_key(grant.token, payload.question)
+    cached = answer_cache.get(key)
+
+    async def replay_cached():
+        yield sse({"type": "text", "delta": cached})
+        yield sse({"type": "done", "answer": cached, "cached": True})
+
     async def event_source():
+        answer = None
         try:
             async for event in stream_agent(payload.question, grant.token):
+                if event["type"] == "done":
+                    answer = event["answer"]
                 yield sse(event)
         except anthropic.APIConnectionError:
             yield sse({
@@ -158,13 +207,17 @@ async def coach_stream(
                 "detail": f"Anthropic API error ({exc.status_code}).",
             })
 
+        if answer is not None:
+            answer_cache.put(key, answer)
+
     return StreamingResponse(
-        event_source(),
+        replay_cached() if cached is not None else event_source(),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
+            "X-Cache": "HIT" if cached is not None else "MISS",
             **grant.headers,
         },
     )

@@ -278,3 +278,23 @@ async def test_stream_ends_with_an_error_event_on_refusal(habit_api, use_model):
     events = await collect(agent.stream_agent("disallowed", "jwt-abc"))
 
     assert events[-1] == {"type": "error", "code": "refused", "detail": "Declined."}
+
+
+async def test_injected_tool_functions_replace_the_defaults(habit_api, use_model):
+    calls = []
+
+    async def fake_habits():
+        calls.append("injected")
+        return [{"id": 1, "name": "Injected", "frequency": "daily"}]
+
+    use_model(calls_tools(("get_user_habits", {})), says("Done."))
+
+    answer = await agent.run_agent(
+        "what am I tracking?",
+        "jwt-abc",
+        tool_functions={"get_user_habits": fake_habits},
+    )
+
+    assert answer == "Done."
+    assert calls == ["injected"]
+    assert habit_api.requests == []

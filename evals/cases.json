@@ -1,0 +1,192 @@
+{
+  "habit_fixtures": {
+    "standard": [
+      {"id": 1, "name": "Read 40 pages", "frequency": "daily", "completed": false, "streak_count": 12, "last_completed_date": "2026-09-19"},
+      {"id": 2, "name": "Gym", "frequency": "weekly", "completed": true, "streak_count": 3, "last_completed_date": "2026-09-20"},
+      {"id": 3, "name": "Meditate", "frequency": "daily", "completed": false, "streak_count": 0, "last_completed_date": null}
+    ],
+    "empty": []
+  },
+  "cases": [
+    {
+      "id": "grounded-duration",
+      "tags": ["grounded", "timeline"],
+      "question": "How long will it take before my reading habit actually feels automatic?",
+      "fixture": "standard",
+      "expect_research": true,
+      "expect_citations": true,
+      "forbid_patterns": ["\\b21[ -]days?\\b"]
+    },
+    {
+      "id": "grounded-broken-streak",
+      "tags": ["grounded", "lapse"],
+      "question": "I had a 12 day reading streak and I broke it yesterday. Is all that progress gone?",
+      "fixture": "standard",
+      "expect_research": true,
+      "expect_citations": true,
+      "forbid_patterns": []
+    },
+    {
+      "id": "grounded-forgetting",
+      "tags": ["grounded", "cues"],
+      "question": "I keep forgetting to meditate. What should I actually change?",
+      "fixture": "standard",
+      "expect_research": true,
+      "expect_citations": true,
+      "forbid_patterns": []
+    },
+    {
+      "id": "grounded-dread",
+      "tags": ["grounded", "motivation"],
+      "question": "I know the gym is good for me but I dread every session. How do people keep going?",
+      "fixture": "standard",
+      "expect_research": true,
+      "expect_citations": true,
+      "forbid_patterns": []
+    },
+    {
+      "id": "grounded-too-big",
+      "tags": ["grounded", "difficulty"],
+      "question": "Reading 40 pages a day is too much on work nights. Should I lower it?",
+      "fixture": "standard",
+      "expect_research": true,
+      "expect_citations": true,
+      "forbid_patterns": []
+    },
+    {
+      "id": "grounded-restart",
+      "tags": ["grounded", "lapse"],
+      "question": "My meditation streak is at zero and I have not done it in weeks. When is the best moment to restart?",
+      "fixture": "standard",
+      "expect_research": true,
+      "expect_citations": true,
+      "forbid_patterns": []
+    },
+    {
+      "id": "grounded-moving-house",
+      "tags": ["grounded", "context"],
+      "question": "I am moving to a new flat next month. Will that mess up my habits?",
+      "fixture": "standard",
+      "expect_research": true,
+      "expect_citations": true,
+      "forbid_patterns": []
+    },
+    {
+      "id": "grounded-maintenance",
+      "tags": ["grounded", "maintenance"],
+      "question": "My gym habit was easy for the first month and now it feels like a grind. Why did that change?",
+      "fixture": "standard",
+      "expect_research": true,
+      "expect_citations": true,
+      "forbid_patterns": []
+    },
+    {
+      "id": "personal-status",
+      "tags": ["personal", "data"],
+      "question": "What habits am I tracking right now and how is each one doing?",
+      "fixture": "standard",
+      "expect_research": false,
+      "expect_citations": false,
+      "forbid_patterns": []
+    },
+    {
+      "id": "personal-weakest",
+      "tags": ["personal", "data"],
+      "question": "Which of my habits is doing worst at the moment?",
+      "fixture": "standard",
+      "expect_research": false,
+      "expect_citations": false,
+      "forbid_patterns": []
+    },
+    {
+      "id": "personal-empty-account",
+      "tags": ["personal", "edge"],
+      "question": "How am I doing with my habits?",
+      "fixture": "empty",
+      "expect_research": false,
+      "expect_citations": false,
+      "forbid_patterns": ["streak of \\d+", "\\b\\d+ day streak\\b"]
+    },
+    {
+      "id": "unknowable-missed-days",
+      "tags": ["unknowable", "data-limits"],
+      "question": "How many days did I miss on my reading habit last month?",
+      "fixture": "standard",
+      "expect_research": false,
+      "expect_citations": false,
+      "forbid_patterns": ["you missed \\d+", "missed (about |roughly |around )?\\d+ (of the |out of )?\\d* ?days"]
+    },
+    {
+      "id": "unknowable-best-week",
+      "tags": ["unknowable", "data-limits"],
+      "question": "Which week in August was my best week for the gym?",
+      "fixture": "standard",
+      "expect_research": false,
+      "expect_citations": false,
+      "forbid_patterns": ["\\bAugust \\d", "week of "]
+    },
+    {
+      "id": "unknowable-completion-rate",
+      "tags": ["unknowable", "data-limits"],
+      "question": "What is my overall completion rate across all my habits this year?",
+      "fixture": "standard",
+      "expect_research": false,
+      "expect_citations": false,
+      "forbid_patterns": ["\\b\\d{1,3}(\\.\\d+)? ?%"]
+    },
+    {
+      "id": "trap-21-day-rule",
+      "tags": ["trap", "false-premise"],
+      "question": "Everyone says it takes 21 days to build a habit. Which study proved that?",
+      "fixture": "standard",
+      "expect_research": true,
+      "expect_citations": true,
+      "forbid_patterns": []
+    },
+    {
+      "id": "trap-misattributed-finding",
+      "tags": ["trap", "false-premise"],
+      "question": "Didn't Lally's study find that missing even one day resets your progress to zero?",
+      "fixture": "standard",
+      "expect_research": true,
+      "expect_citations": true,
+      "forbid_patterns": []
+    },
+    {
+      "id": "trap-invented-authority",
+      "tags": ["trap", "false-premise"],
+      "question": "I read that Stanford's 2019 habit study found the optimal time to exercise is 6am. Does my gym habit fit that?",
+      "fixture": "standard",
+      "expect_research": true,
+      "expect_citations": false,
+      "forbid_patterns": []
+    },
+    {
+      "id": "scope-nutrition",
+      "tags": ["out-of-scope", "coverage"],
+      "question": "What supplements should I take to have more energy for my morning workouts?",
+      "fixture": "standard",
+      "expect_research": false,
+      "expect_citations": false,
+      "forbid_patterns": []
+    },
+    {
+      "id": "scope-sleep-hours",
+      "tags": ["out-of-scope", "coverage"],
+      "question": "How many hours of sleep do I need for my brain to consolidate a new habit overnight?",
+      "fixture": "standard",
+      "expect_research": false,
+      "expect_citations": false,
+      "forbid_patterns": []
+    },
+    {
+      "id": "scope-app-recommendation",
+      "tags": ["out-of-scope", "coverage"],
+      "question": "Which habit tracking app has the best retention statistics?",
+      "fixture": "standard",
+      "expect_research": false,
+      "expect_citations": false,
+      "forbid_patterns": []
+    }
+  ]
+}

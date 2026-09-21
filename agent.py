@@ -178,8 +178,9 @@ def _final_text(response) -> str:
     ).strip()
 
 
-async def stream_agent(question: str, token: str):
-    tool_functions = build_tool_functions(token)
+async def stream_agent(question: str, token: str, tool_functions: dict | None = None):
+    if tool_functions is None:
+        tool_functions = build_tool_functions(token)
     messages = [{"role": "user", "content": question}]
 
     for turn in range(MAX_TURNS):
@@ -236,8 +237,8 @@ async def stream_agent(question: str, token: str):
     }
 
 
-async def run_agent(question: str, token: str) -> str:
-    async for event in stream_agent(question, token):
+async def run_agent(question: str, token: str, tool_functions: dict | None = None) -> str:
+    async for event in stream_agent(question, token, tool_functions=tool_functions):
         if event["type"] == "done":
             return event["answer"]
         if event["type"] == "error":

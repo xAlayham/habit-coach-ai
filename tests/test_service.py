@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 import service
 from agent import AgentRefused, TurnLimitExceeded
+from lru import LRUCache
 from ratelimit import TokenBucketRateLimiter
 
 OVERRIDE_TOKEN = "override-jwt"
@@ -20,6 +21,50 @@ def fresh_limiter(monkeypatch):
         "limiter",
         TokenBucketRateLimiter(capacity=100, refill_per_second=100.0),
     )
+
+
+@pytest.fixture(autouse=True)
+def fresh_cache(monkeypatch):
+    monkeypatch.setattr(service, "answer_cache", LRUCache(capacity=128))
+
+
+@pytest.fixture
+def tight_cache(monkeypatch):
+    def install(capacity=8, ttl_seconds=None, time_fn=None):
+        cache = LRUCache(
+            capacity=capacity,
+            ttl_seconds=ttl_seconds,
+            **({"time_fn": time_fn} if time_fn else {}),
+        )
+        monkeypatch.setattr(service, "answer_cache", cache)
+        return cache
+
+    return install
+
+
+@pytest.fixture
+def counting_agent(monkeypatch):
+    def install(answer="cached answer", raises=None):
+        calls = []
+
+        async def fake_run_agent(question, token):
+            calls.append((question, token))
+            if raises is not None:
+                raise raises
+            return answer
+
+        async def fake_stream_agent(question, token):
+            calls.append((question, token))
+            if raises is not None:
+                raise raises
+            yield {"type": "text", "delta": answer}
+            yield {"type": "done", "answer": answer}
+
+        monkeypatch.setattr(service, "run_agent", fake_run_agent)
+        monkeypatch.setattr(service, "stream_agent", fake_stream_agent)
+        return calls
+
+    return install
 
 
 @pytest.fixture
@@ -406,3 +451,147 @@ def test_malformed_requests_still_cost_quota(client, agent_returns, tight_limite
     assert client.post("/coach", json={"question": ""}).status_code == 422
     assert client.post("/coach", json={"question": "valid"}).status_code == 429
     assert len(limiter) == 1
+
+
+def test_identical_question_is_served_from_cache(client, counting_agent):
+    calls = counting_agent(answer="Keep going.")
+
+    first = client.post("/coach", json={"question": "how am I doing?"})
+    second = client.post("/coach", json={"question": "how am I doing?"})
+
+    assert first.json() == second.json() == {"answer": "Keep going."}
+    assert first.headers["x-cache"] == "MISS"
+    assert second.headers["x-cache"] == "HIT"
+    assert len(calls) == 1
+
+
+def test_different_questions_do_not_collide(client, counting_agent):
+    calls = counting_agent()
+
+    client.post("/coach", json={"question": "question one"})
+    client.post("/coach", json={"question": "question two"})
+
+    assert len(calls) == 2
+
+
+def test_whitespace_only_differences_share_a_cache_entry(client, counting_agent):
+    calls = counting_agent()
+
+    client.post("/coach", json={"question": "how am I doing?"})
+    second = client.post("/coach", json={"question": "  how   am I doing?  "})
+
+    assert second.headers["x-cache"] == "HIT"
+    assert len(calls) == 1
+
+
+def test_users_never_share_a_cache_entry(unauthenticated_client, counting_agent):
+    calls = counting_agent()
+    alice = {"Authorization": f"Bearer {jwt_with_sub('alice')}"}
+    bob = {"Authorization": f"Bearer {jwt_with_sub('bob')}"}
+
+    first = unauthenticated_client.post("/coach", json={"question": "how am I doing?"}, headers=alice)
+    second = unauthenticated_client.post("/coach", json={"question": "how am I doing?"}, headers=bob)
+
+    assert first.headers["x-cache"] == "MISS"
+    assert second.headers["x-cache"] == "MISS"
+    assert len(calls) == 2
+
+
+def test_the_same_user_with_a_new_jwt_still_hits_the_cache(unauthenticated_client, counting_agent):
+    calls = counting_agent()
+    monday = {"Authorization": f"Bearer {jwt_with_sub('alice', nonce='monday')}"}
+    tuesday = {"Authorization": f"Bearer {jwt_with_sub('alice', nonce='tuesday')}"}
+
+    unauthenticated_client.post("/coach", json={"question": "hi"}, headers=monday)
+    second = unauthenticated_client.post("/coach", json={"question": "hi"}, headers=tuesday)
+
+    assert second.headers["x-cache"] == "HIT"
+    assert len(calls) == 1
+
+
+def test_the_model_name_is_part_of_the_cache_key(client, counting_agent, monkeypatch):
+    calls = counting_agent()
+
+    client.post("/coach", json={"question": "hi"})
+    monkeypatch.setattr(service, "MODEL", "some-other-model")
+    second = client.post("/coach", json={"question": "hi"})
+
+    assert second.headers["x-cache"] == "MISS"
+    assert len(calls) == 2
+
+
+def test_failures_are_not_cached(client, counting_agent, agent_returns):
+    agent_returns(raises=TurnLimitExceeded("out of turns"))
+    failed = client.post("/coach", json={"question": "hi"})
+
+    calls = counting_agent(answer="worked this time")
+    recovered = client.post("/coach", json={"question": "hi"})
+
+    assert failed.status_code == 504
+    assert recovered.status_code == 200
+    assert recovered.headers["x-cache"] == "MISS"
+    assert len(calls) == 1
+
+
+def test_cache_entries_expire(client, counting_agent, tight_cache):
+    clock = type("C", (), {"now": 1000.0, "__call__": lambda self: self.now})()
+    tight_cache(ttl_seconds=60, time_fn=clock)
+    calls = counting_agent()
+
+    client.post("/coach", json={"question": "hi"})
+    clock.now += 61
+    second = client.post("/coach", json={"question": "hi"})
+
+    assert second.headers["x-cache"] == "MISS"
+    assert len(calls) == 2
+
+
+def test_cache_evicts_under_capacity_pressure(client, counting_agent, tight_cache):
+    tight_cache(capacity=2)
+    calls = counting_agent()
+
+    for question in ("one", "two", "three"):
+        client.post("/coach", json={"question": question})
+    again = client.post("/coach", json={"question": "one"})
+
+    assert again.headers["x-cache"] == "MISS"
+    assert len(calls) == 4
+
+
+def test_stream_replays_a_cached_answer(client, counting_agent):
+    calls = counting_agent(answer="Keep going.")
+
+    client.post("/coach/stream", json={"question": "hi"})
+    second = client.post("/coach/stream", json={"question": "hi"})
+    frames = parse_sse(second.text)
+
+    assert second.headers["x-cache"] == "HIT"
+    assert len(calls) == 1
+    assert [name for name, _ in frames] == ["text", "done"]
+    assert frames[-1][1] == {"type": "done", "answer": "Keep going.", "cached": True}
+
+
+def test_cache_is_shared_between_both_endpoints(client, counting_agent):
+    calls = counting_agent(answer="Keep going.")
+
+    client.post("/coach", json={"question": "hi"})
+    streamed = client.post("/coach/stream", json={"question": "hi"})
+
+    assert streamed.headers["x-cache"] == "HIT"
+    assert len(calls) == 1
+
+
+def test_stats_reports_cache_and_rate_limit_counters(client, counting_agent, tight_cache):
+    tight_cache(capacity=4)
+    counting_agent()
+
+    client.post("/coach", json={"question": "hi"})
+    client.post("/coach", json={"question": "hi"})
+    body = client.get("/stats").json()
+
+    assert body["cache"]["hits"] == 1
+    assert body["cache"]["misses"] == 1
+    assert body["cache"]["size"] == 1
+    assert body["cache"]["capacity"] == 4
+    assert body["cache"]["hit_rate"] == 0.5
+    assert body["rate_limit"]["tracked_users"] >= 1
