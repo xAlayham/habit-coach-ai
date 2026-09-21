@@ -16,6 +16,13 @@ embedding model (~80MB) to your user cache.
 Create a `.env` with `ANTHROPIC_API_KEY`, `HABIT_API_BASE` and, for the CLI only,
 `HABIT_API_TOKEN`.
 
+Optional rate-limit tuning (per user, applied to `/coach` and `/coach/stream`):
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `RATE_LIMIT_BURST` | `5` | Requests allowed back-to-back |
+| `RATE_LIMIT_PER_MINUTE` | `5` | Sustained refill rate |
+
 ## Running
 
 ```bash

@@ -1,3 +1,4 @@
+import base64
 import json
 
 import anthropic
@@ -7,8 +8,30 @@ from fastapi.testclient import TestClient
 
 import service
 from agent import AgentRefused, TurnLimitExceeded
+from ratelimit import TokenBucketRateLimiter
 
 OVERRIDE_TOKEN = "override-jwt"
+
+
+@pytest.fixture(autouse=True)
+def fresh_limiter(monkeypatch):
+    monkeypatch.setattr(
+        service,
+        "limiter",
+        TokenBucketRateLimiter(capacity=100, refill_per_second=100.0),
+    )
+
+
+@pytest.fixture
+def tight_limiter(monkeypatch):
+    def install(capacity=2, refill_per_second=0.5):
+        limiter = TokenBucketRateLimiter(
+            capacity=capacity, refill_per_second=refill_per_second
+        )
+        monkeypatch.setattr(service, "limiter", limiter)
+        return limiter
+
+    return install
 
 
 @pytest.fixture
@@ -68,6 +91,15 @@ def parse_sse(body):
         lines = dict(line.split(": ", 1) for line in block.split("\n"))
         parsed.append((lines["event"], json.loads(lines["data"])))
     return parsed
+
+
+def jwt_with_sub(subject, nonce="a"):
+    def segment(raw):
+        return base64.urlsafe_b64encode(raw).decode().rstrip("=")
+
+    header = segment(b'{"alg":"HS256","typ":"JWT"}')
+    payload = segment(json.dumps({"sub": subject, "nonce": nonce}).encode())
+    return f"{header}.{payload}.signature-{nonce}"
 
 
 def test_health_needs_no_auth(unauthenticated_client):
@@ -234,3 +266,143 @@ def test_stream_rejects_an_empty_question(client, agent_streams):
 
     assert response.status_code == 422
     assert received == {}
+
+
+def test_rate_limit_key_is_stable_across_reissued_tokens():
+    first = service.rate_limit_key(jwt_with_sub("user-42", nonce="monday"))
+    second = service.rate_limit_key(jwt_with_sub("user-42", nonce="tuesday"))
+    other = service.rate_limit_key(jwt_with_sub("user-99", nonce="monday"))
+
+    assert first == second
+    assert first != other
+
+
+def test_rate_limit_key_falls_back_to_the_whole_token():
+    assert service.rate_limit_key("not-a-jwt") == service.rate_limit_key("not-a-jwt")
+    assert service.rate_limit_key("not-a-jwt") != service.rate_limit_key("other")
+
+
+def test_rate_limit_key_does_not_leak_the_token():
+    token = jwt_with_sub("user-42")
+
+    key = service.rate_limit_key(token)
+
+    assert token not in key
+    assert "user-42" not in key
+
+
+def test_successful_response_carries_rate_limit_headers(client, agent_returns, tight_limiter):
+    tight_limiter(capacity=5)
+    agent_returns(answer="ok")
+
+    response = client.post("/coach", json={"question": "hi"})
+
+    assert response.headers["x-ratelimit-limit"] == "5"
+    assert response.headers["x-ratelimit-remaining"] == "4"
+    assert int(response.headers["x-ratelimit-reset"]) >= 1
+
+
+def test_stream_response_carries_rate_limit_headers(client, agent_streams, tight_limiter):
+    tight_limiter(capacity=5)
+    agent_streams(events=[{"type": "done", "answer": "ok"}])
+
+    response = client.post("/coach/stream", json={"question": "hi"})
+
+    assert response.headers["x-ratelimit-limit"] == "5"
+    assert response.headers["x-ratelimit-remaining"] == "4"
+
+
+def test_burst_then_429_with_retry_after(client, agent_returns, tight_limiter):
+    tight_limiter(capacity=2, refill_per_second=0.5)
+    agent_returns(answer="ok")
+
+    first = client.post("/coach", json={"question": "hi"})
+    second = client.post("/coach", json={"question": "hi"})
+    third = client.post("/coach", json={"question": "hi"})
+
+    assert (first.status_code, second.status_code) == (200, 200)
+    assert third.status_code == 429
+    assert third.headers["retry-after"] == "2"
+    assert third.headers["x-ratelimit-remaining"] == "0"
+    assert third.headers["x-ratelimit-limit"] == "2"
+    assert "Rate limit exceeded" in third.json()["detail"]
+
+
+def test_rate_limited_request_never_reaches_the_model(client, agent_returns, tight_limiter):
+    tight_limiter(capacity=1)
+    received = agent_returns(answer="ok")
+
+    client.post("/coach", json={"question": "first"})
+    received.clear()
+    blocked = client.post("/coach", json={"question": "second"})
+
+    assert blocked.status_code == 429
+    assert received == {}
+
+
+def test_stream_endpoint_is_rate_limited_too(client, agent_streams, tight_limiter):
+    tight_limiter(capacity=1)
+    agent_streams(events=[{"type": "done", "answer": "ok"}])
+
+    assert client.post("/coach/stream", json={"question": "hi"}).status_code == 200
+    assert client.post("/coach/stream", json={"question": "hi"}).status_code == 429
+
+
+def test_both_endpoints_share_one_budget(client, agent_returns, agent_streams, tight_limiter):
+    tight_limiter(capacity=1)
+    agent_returns(answer="ok")
+    agent_streams(events=[{"type": "done", "answer": "ok"}])
+
+    assert client.post("/coach", json={"question": "hi"}).status_code == 200
+    assert client.post("/coach/stream", json={"question": "hi"}).status_code == 429
+
+
+def test_users_do_not_share_a_budget(unauthenticated_client, agent_returns, tight_limiter):
+    tight_limiter(capacity=1)
+    agent_returns(answer="ok")
+    alice = {"Authorization": f"Bearer {jwt_with_sub('alice')}"}
+    bob = {"Authorization": f"Bearer {jwt_with_sub('bob')}"}
+
+    assert unauthenticated_client.post("/coach", json={"question": "hi"}, headers=alice).status_code == 200
+    assert unauthenticated_client.post("/coach", json={"question": "hi"}, headers=alice).status_code == 429
+    assert unauthenticated_client.post("/coach", json={"question": "hi"}, headers=bob).status_code == 200
+
+
+def test_a_reissued_jwt_does_not_reset_the_budget(unauthenticated_client, agent_returns, tight_limiter):
+    tight_limiter(capacity=1)
+    agent_returns(answer="ok")
+    monday = {"Authorization": f"Bearer {jwt_with_sub('alice', nonce='monday')}"}
+    tuesday = {"Authorization": f"Bearer {jwt_with_sub('alice', nonce='tuesday')}"}
+
+    assert unauthenticated_client.post("/coach", json={"question": "hi"}, headers=monday).status_code == 200
+    assert unauthenticated_client.post("/coach", json={"question": "hi"}, headers=tuesday).status_code == 429
+
+
+def test_health_is_never_rate_limited(unauthenticated_client, tight_limiter):
+    tight_limiter(capacity=1)
+
+    for _ in range(5):
+        assert unauthenticated_client.get("/health").status_code == 200
+
+
+def test_unauthenticated_requests_do_not_consume_anyone_s_budget(
+    unauthenticated_client, agent_returns, tight_limiter
+):
+    tight_limiter(capacity=1)
+    agent_returns(answer="ok")
+    alice = {"Authorization": f"Bearer {jwt_with_sub('alice')}"}
+
+    for _ in range(3):
+        assert unauthenticated_client.post("/coach", json={"question": "hi"}).status_code == 401
+
+    assert unauthenticated_client.post("/coach", json={"question": "hi"}, headers=alice).status_code == 200
+
+
+def test_malformed_requests_still_cost_quota(client, agent_returns, tight_limiter):
+    limiter = tight_limiter(capacity=2)
+    agent_returns(answer="ok")
+
+    assert client.post("/coach", json={"question": ""}).status_code == 422
+    assert client.post("/coach", json={"question": ""}).status_code == 422
+    assert client.post("/coach", json={"question": "valid"}).status_code == 429
+    assert len(limiter) == 1
