@@ -84,7 +84,7 @@ Create a `.env` with `ANTHROPIC_API_KEY`, `HABIT_API_BASE` and, for the CLI only
 ```bash
 uvicorn service:app --reload          # API at /coach, docs at /docs
 python agent.py "how am I doing?"     # same agent from the command line
-python -m pytest                      # 140 tests
+python -m pytest                      # 143 tests
 ```
 
 ## Docker
@@ -151,3 +151,7 @@ citations were found.
   parallel calls; splitting them teaches the model to stop calling in parallel.
 - **Turn exhaustion is a 504 on `/coach`** but an `error` event on `/coach/stream`,
   because once the first byte of a stream is sent the status code is already 200.
+
+## License
+
+MIT - see [LICENSE](LICENSE).
