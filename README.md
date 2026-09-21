@@ -5,12 +5,23 @@ the user's real habit data through their existing API, grounds its advice in a
 curated library of habit-formation research, and streams the answer back token by
 token.
 
-This is the third of three services. The other two are already deployed:
+## Live demo
+
+- **App:** [habit-tracker-web-alpha.vercel.app](https://habit-tracker-web-alpha.vercel.app) — register, add a
+  few habits, then open **Ask coach** in the bottom-right corner
+- **API docs:** [habit-coach-ai-dnj2.onrender.com/docs](https://habit-coach-ai-dnj2.onrender.com/docs) —
+  interactive Swagger UI for this service
+
+Both backends run on Render's free tier and sleep after 15 minutes idle, so the
+first request can take up to a minute while they wake. The demo database is
+reset whenever the habit API restarts, so an account may need re-registering.
+
+## The three services
 
 | Service | Role | Stack |
 | --- | --- | --- |
-| habit-tracker-api | REST API, JWT auth, per-user CRUD | FastAPI, on Render |
-| habit-tracker-web | Frontend | React/TS, on Vercel |
+| [habit-tracker-api](https://github.com/xAlayham/habit-tracker-api) | REST API, JWT auth, per-user CRUD | FastAPI, on Render |
+| [habit-tracker-web](https://github.com/xAlayham/habit-tracker-web) | Frontend, including the coach chat widget | React/TS, on Vercel |
 | **habit-coach-ai** | **AI coaching layer (this repo)** | **FastAPI + Anthropic SDK + Chroma** |
 
 ## Architecture
